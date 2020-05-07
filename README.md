@@ -12,4 +12,4 @@ Basic diskussion  @FHEM: [Entwicklung SIGNALDuino Empfänger Firm- und Hardware 
 in german.
 
 
-[Prototype](https://github.com/juergs/MapleSduino_SER2WLAN/blob/master/pictures/MapleSDuino_SerToWLAN.jpg =250x)
+<img src="https://github.com/juergs/MapleSduino_SER2WLAN/blob/master/pictures/MapleSDuino_SerToWLAN.jpg" alt="breadboard-prototype" style="width:800px;"/>
