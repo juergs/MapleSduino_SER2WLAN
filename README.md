@@ -10,3 +10,6 @@ Adding WLAN functionality will be located in branches!
 
 Basic diskussion  @FHEM: [Entwicklung SIGNALDuino Empfänger Firm- und Hardware V 4.x.x auch auf Maple Mini](https://forum.fhem.de/index.php/topic,106278.0.html) 
 in german.
+
+
+[Prototype](https://github.com/juergs/MapleSduino_SER2WLAN/blob/master/pictures/MapleSDuino_SerToWLAN.jpg ==250px)
