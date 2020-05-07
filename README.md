@@ -2,7 +2,7 @@
 Adapted SIGNALDuino Version for Maple-Mini and Air602 (W600)  
 
 
-This is the initial version which i will work on.
+This is the initial version, on which i'll work on.
 
 The master branch is derived from [RALF9s](https://github.com/Ralf9/SIGNALDuino/tree/dev-r41x_cc1101) version *SIGNALDuino-4.1.0-dev200427* and should be considered as start point only. Adding WLAN functionality will be located in branches only! 
 
