@@ -9,7 +9,7 @@ The master branch is derived from [RALF9s](https://github.com/Ralf9/SIGNALDuino/
 Basis to this project is forum-discussion  @FHEM: [Entwicklung SIGNALDuino Empfänger Firm- und Hardware V 4.x.x auch auf Maple Mini](https://forum.fhem.de/index.php/topic,106278.0.html) 
 in german language.
 
-Integration of WLAN-Gateway: [W600_Serial_WLAN_Bridge](https://github.com/juergs/W600_Tcp_To_Serial_Bridge)
+Manages the integration of a WLAN-Gateway: [W600_Serial_WLAN_Bridge](https://github.com/juergs/W600_Tcp_To_Serial_Bridge)
 
 
 <img src="https://github.com/juergs/MapleSduino_SER2WLAN/blob/master/pictures/MapleSDuino_SerToWLAN.jpg" alt="breadboard-prototype" style="width:800px;"/>
