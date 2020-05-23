@@ -139,6 +139,7 @@
 #include "bitstore.h"
 #include "signalDecoder4.h"
 #include "SimpleFIFO.h"
+#include <HardwareSerial.h>
 //---------------------------------------------------------------------------------------------
 
 SimpleFIFO<int16_t,FIFO_LENGTH> FiFo; //store FIFO_LENGTH # ints
@@ -349,6 +350,11 @@ const char * const CSetCmd[] PROGMEM = { string_0, string_1, string_2, string_3,
 	int16_t freeMem2=0;  // available ram calculation #2
 #endif  // CMP_MEMDBG
 
+//HardwareSerial Serial2(PA3, PA2);
+//HardwareSerial Serial3(PB11, PB10);
+
+HardwareSerial Serial2(USART2, SERIAL_8N1);
+HardwareSerial Serial3(USART3, SERIAL_8N1);
 //---------------------------------------------------------------------------------------------------
 void setup() 
 {
@@ -366,7 +372,19 @@ void setup()
 		Ethernet.begin(mac, ip, gateway, subnet);
 		server.begin();		// start listening for clients
 	#else
-		Serial.begin(BAUDRATE);
+
+    //Serial1.setTx(PA9);
+    //Serial1.setRx(PA10);
+    
+    Serial2.setTx(PA2);
+    Serial2.setRx(PA3);
+    Serial3.setTx(PB10);
+    Serial3.setRx(PB11);
+		
+	Serial.begin(BAUDRATE);    
+    Serial2.begin(BAUDRATE);
+    Serial3.begin(BAUDRATE);
+    	
 		//while (!Serial) {
 		//	; // wait for serial port to connect. Needed for native USB
 		//}
@@ -378,6 +396,12 @@ void setup()
 				break;
 			}
 		}
+
+	//--- first Test
+    Serial1.println("* - Hello UART 1!");    
+    Serial2.println("* - Hello UART 2!");    
+    Serial3.println("* - Hello UART 3!");
+   
 	#endif
 
 	if (musterDec.MdebEnabled) 
