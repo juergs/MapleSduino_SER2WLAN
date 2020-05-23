@@ -172,19 +172,19 @@ SignalDetectorClass musterDec;
 #define pulseMin  			90
 
 #ifdef MAPLE_Mini
-  #define maxCmdString 		600
+  #define maxCmdString 		  600
 #else
-  #define maxCmdString 		350
+  #define maxCmdString 		  350
 #endif
 
-#define maxSendPattern 		10
-#define mcMinBitLenDef   	17
-#define ccMaxBuf 			64
-#define defMaxMsgSize 		1500	// selber Wert wie in signalDecoder4.h
-#define maxSendEcho 		100
-#define radioOokAsk 		1
-#define defSelRadio 		1	// B
-#define defStatRadio 		0xFF
+#define maxSendPattern 		  10
+#define mcMinBitLenDef   	  17
+#define ccMaxBuf 			      64
+#define defMaxMsgSize 		  1500	// selber Wert wie in signalDecoder4.h
+#define maxSendEcho 		    100
+#define radioOokAsk 		    1
+#define defSelRadio 		    1	// B
+#define defStatRadio 		    0xFF
 //--- EEProm Address
 #define EE_MAGIC_OFFSET     0
 #define addr_togglesec      0x3C
@@ -193,8 +193,8 @@ SignalDetectorClass musterDec;
 #define addr_statRadio      0xEB    // A=EB B=EC C=ED D=EE  Bit 0-3 Bank,  1F-Init, Bit 6 = 1 - Fehler bei Erkennung, Bit 6&7 = 1 - Miso Timeout, FF-deaktiviert
 #define addr_selRadio       0xEF
 #define addr_features       0xFF
-//#define addr_featuresB       0x3F
-//#define addr_bank           0xFD
+//#define addr_featuresB    0x3F
+//#define addr_bank         0xFD
 
 volatile bool blinkLED 	= false;
 String cmdstring 		= "";
@@ -214,7 +214,7 @@ uint8_t ccmode 			= 0;		// cc1101 Mode: 0 - normal, 1 - FIFO, 2 - FIFO ohne dup,
 uint8_t radionr 		= defSelRadio;
 uint8_t radio_bank[4];
 uint8_t ccBuf[4][ccMaxBuf];
-bool command_available=false;
+bool _command_available = false;
 
 //----Prototypes--------------------------------------------------------------------------
 void cmd_help_S();
@@ -243,19 +243,23 @@ void enableReceive();
 void disableReceive();
 void serialEvent();
 void cronjob();
-int  freeRam();
 void HandleCommand();
-unsigned long getUptime();
+void printHex2(const byte hex);
 void storeFunctions(const int8_t ms=1, int8_t mu=1, int8_t mc=1, int8_t red=1, int8_t deb=0, int8_t led=1, int8_t overfl=0);
 void getFunctions(bool *ms,bool *mu,bool *mc, bool *red, bool *deb, bool *led, bool *overfl);
 void initEEPROM(void);
 void setCCmode();
 void print_Bank();
 void print_radio_sum();
+void serial2Event();
+void serial3Event();
+int  freeRam();
+unsigned long getUptime();
 uint16_t getBankOffset(uint8_t tmpBank);
 uint8_t  radioDetekt(bool confmode, uint8_t Dstat);
-void printHex2(const byte hex);
+
 uint8_t rssiCallback() { return 0; };	// Dummy return if no rssi value can be retrieved from receiver
+
 //----END-Prototypes--------------------------------------------------------------------------
 
 //typedef void (* GenericFP)(int); //function pointer prototype to a function which takes an 'int' an returns 'void'
@@ -355,6 +359,7 @@ const char * const CSetCmd[] PROGMEM = { string_0, string_1, string_2, string_3,
 
 HardwareSerial Serial2(USART2, SERIAL_8N1);
 HardwareSerial Serial3(USART3, SERIAL_8N1);
+
 //---------------------------------------------------------------------------------------------------
 void setup() 
 {
@@ -372,16 +377,14 @@ void setup()
 		Ethernet.begin(mac, ip, gateway, subnet);
 		server.begin();		// start listening for clients
 	#else
-
     //Serial1.setTx(PA9);
-    //Serial1.setRx(PA10);
-    
+    //Serial1.setRx(PA10);   
     Serial2.setTx(PA2);
     Serial2.setRx(PA3);
     Serial3.setTx(PB10);
     Serial3.setRx(PB11);
 		
-	Serial.begin(BAUDRATE);    
+	  Serial.begin(BAUDRATE);    
     Serial2.begin(BAUDRATE);
     Serial3.begin(BAUDRATE);
     	
@@ -397,7 +400,7 @@ void setup()
 			}
 		}
 
-	//--- first Test
+	  //--- first Test
     Serial1.println("* - Hello UART 1!");    
     Serial2.println("* - Hello UART 2!");    
     Serial3.println("* - Hello UART 3!");
@@ -525,93 +528,36 @@ void setup()
 	radionr = remRadionr;
 }
 //---------------------------------------------------------------------------------------------
-#ifdef MAPLE_Mini
-	void cronjob(HardwareTimer*) 
-	{
-		noInterrupts();
-
-		static uint16_t cnt0 = 0;
-		static uint8_t cnt1 = 0;
-		const unsigned long  duration = micros() - lastTime;
-
-		if (duration > maxPulse && RXenabled[radioOokAsk]) 
-		{ 
-			//--- auf Maximalwert pruefen.
-			int16_t sDuration = maxPulse;
-			if (isLow(PIN_RECEIVE)) 
-			{ 
-				//--- wenn jetzt low ist, ist auch weiterhin low
-				sDuration = -sDuration;
-			}
-			FiFo.enqueue(sDuration);
-
-			lastTime = micros();
-		}
-		digitalWrite(PIN_LED, blinkLED);
-		blinkLED = false;
-
-		interrupts();
-			
-		if (cnt0++ == 0) 
-		{
-			if (cnt1++ == 0) 
-			{
-				getUptime();
-			}
-		}
-	}
-#elif 
-	void cronjob() 
-	{
-		cli();
-		static uint16_t cnt0 = 0;
-		static uint8_t cnt1 = 0;
-		const unsigned long  duration = micros() - lastTime;
-
-		if (duration > maxPulse && RXenabled[radioOokAsk]) 
-		{ 
-			//--- auf Maximalwert pruefen.
-			int16_t sDuration = maxPulse;
-			if (isLow(PIN_RECEIVE)) 
-			{ 
-				//--- wenn jetzt low ist, ist auch weiterhin low
-				sDuration = -sDuration;
-			}
-			FiFo.enqueue(sDuration);
-
-			lastTime = micros();
-		}
-		digitalWrite(PIN_LED, blinkLED);
-		blinkLED = false;
-
-		sei();
-					
-		if (cnt0++ == 0) 
-		{
-			if (cnt1++ == 0) 
-			{
-				getUptime();
-			}
-		}
-	}
-#endif
-//---------------------------------------------------------------------------------------------
-void loop() {
+void loop() 
+{
 	static int16_t aktVal=0;
 	bool state;
 	uint8_t fifoCount;
 	
 	serialEvent();
 
+	if (!_command_available)
+	{
+		serial2Event();
+	}
+
+	if (!_command_available)
+	{
+		serial3Event(); 
+	}
+	
 	#ifdef LAN_WIZ
 		ethernetLoop();
 	#endif
 
-	if (command_available) 
+	if (_command_available) 
 	{
-		command_available=false;
+		_command_available = false;
+		
 		HandleCommand();
-		if (!command_available) { cmdstring = ""; }
+		
+		if (!_command_available) { cmdstring = ""; }
+
 		if (LEDenabled) 
 		{
 		  blinkLED=true;
@@ -622,8 +568,8 @@ void loop() {
 		wdt_reset();
 	#endif
 
-	uint8_t remRadionr = radionr;
-	uint8_t remccmode = ccmode;
+	uint8_t remRadionr  = radionr;
+	uint8_t remccmode   = ccmode;
 	uint8_t tmpBank;
 	uint16_t bankoff;
 	for (radionr = 0; radionr < 4; radionr++) 
@@ -671,7 +617,79 @@ void loop() {
  	ccmode = remccmode;
 }
 //---------------------------------------------------------------------------------------------
-void getRxFifo(uint16_t Boffs) {
+#ifdef MAPLE_Mini
+  void cronjob(HardwareTimer*) 
+  {
+    noInterrupts();
+
+    static uint16_t cnt0 = 0;
+    static uint8_t cnt1 = 0;
+    const unsigned long  duration = micros() - lastTime;
+
+    if (duration > maxPulse && RXenabled[radioOokAsk]) 
+    { 
+      //--- auf Maximalwert pruefen.
+      int16_t sDuration = maxPulse;
+      if (isLow(PIN_RECEIVE)) 
+      { 
+        //--- wenn jetzt low ist, ist auch weiterhin low
+        sDuration = -sDuration;
+      }
+      FiFo.enqueue(sDuration);
+
+      lastTime = micros();
+    }
+    digitalWrite(PIN_LED, blinkLED);
+    blinkLED = false;
+
+    interrupts();
+      
+    if (cnt0++ == 0) 
+    {
+      if (cnt1++ == 0) 
+      {
+        getUptime();
+      }
+    }
+  }
+#elif 
+  void cronjob() 
+  {
+    cli();
+    static uint16_t cnt0 = 0;
+    static uint8_t cnt1 = 0;
+    const unsigned long  duration = micros() - lastTime;
+
+    if (duration > maxPulse && RXenabled[radioOokAsk]) 
+    { 
+      //--- auf Maximalwert pruefen.
+      int16_t sDuration = maxPulse;
+      if (isLow(PIN_RECEIVE)) 
+      { 
+        //--- wenn jetzt low ist, ist auch weiterhin low
+        sDuration = -sDuration;
+      }
+      FiFo.enqueue(sDuration);
+
+      lastTime = micros();
+    }
+    digitalWrite(PIN_LED, blinkLED);
+    blinkLED = false;
+
+    sei();
+          
+    if (cnt0++ == 0) 
+    {
+      if (cnt1++ == 0) 
+      {
+        getUptime();
+      }
+    }
+  }
+#endif
+//---------------------------------------------------------------------------------------------
+void getRxFifo(uint16_t Boffs) 
+{
 	uint8_t fifoBytes;
 	bool dup;		// true bei identischen Wiederholungen bei readRXFIFO
 
@@ -1305,16 +1323,17 @@ void send_ccFIFO()
 void IT_CMDs();
 //---------------------------------------------------------------------------------------------
 void HandleCommand()
-{
-	//	uint8_t reg;
-	//	uint8_t val;
-	uint8_t i;
-	
+{	
+	uint8_t i = 0;	
 	for (i=0; i < cmdAnz; i++) 
 	{
+    //--- search command token 
 		if (cmdstring.charAt(0) == cmd0[i]) 
 		{
-			if (cmd1[i] == ' ' || (cmdstring.charAt(1) == cmd1[i])) 
+      //--- found, is there another companion char? 
+      //--- seems to be that as minimum a space-char is obligatory ?   
+      MSG_PRINT("HandleCommand.cmd1[i]="); MSG_PRINTLN( cmdstring.charAt(1) );    
+			if ( cmd1[i] == ' ' || ( cmdstring.charAt(1)==cmd1[i]) )
 			{
 				break;
 			}
@@ -1326,13 +1345,12 @@ void HandleCommand()
 	
 	if (i < cmdAnz) 
 	{
-		//MSG_PRINT(F(" "));
-		//MSG_PRINT(cmd0[i]);
-		//MSG_PRINT(cmd1[i]);
+		//MSG_PRINT(F(" ")); MSG_PRINT(cmd0[i]);MSG_PRINT(cmd1[i]);
 		cmdFP[i]();
 	}
 	else 
 	{
+    MSG_PRINT("HandleCommand.i="); MSG_PRINT(i); MSG_PRINTLN("   unsupported?");   
 		unsuppCmd = true;
 	}
 	
@@ -1810,7 +1828,7 @@ void cmd_send()
 {
 	if (musterDec.getState() != searching )
 	{
-		command_available=true;
+		_command_available=true;
 	}
 	else 
 	{
@@ -2545,11 +2563,65 @@ void serialEvent()
     char inChar = (char)MSG_PRINTER.read(); 
     switch(inChar)
     {
+  		case '\n':
+  		case '\r':
+  		case '\0':
+  		case '#':
+  			_command_available = true;
+  			break;
+  		default:
+  			cmdstring += inChar;
+    }
+
+    if (cmdstring.length() > maxCmdString)
+    {
+  		cmdstring = "";				//--- restliche Zeichen ignorieren  		
+  		MSG_PRINT(F("cmd to long! (max "));
+  		MSG_PRINT(maxCmdString);
+  		MSG_PRINTLN(F(")"));
+    }
+  }
+}
+//---------------------------------------------------------------------------------------------
+void serial2Event()
+{
+  while ( Serial2.available() )
+  {
+    char inChar = (char)Serial2.read(); 
+    switch(inChar)
+    {
+  		case '\n':
+  		case '\r':
+  		case '\0':
+  		case '#':
+  			_command_available = true;
+  			break;
+  		default:
+  			cmdstring += inChar;
+    }
+
+    if (cmdstring.length() > maxCmdString)
+    {
+  		cmdstring = "";				//--- restliche Zeichen ignorieren  		
+  		Serial2.print(F("cmd to long! (max "));
+  		Serial2.print(maxCmdString);
+  		Serial2.print(F(")"));
+    }
+  }
+}
+//---------------------------------------------------------------------------------------------
+void serial3Event()
+{
+  while ( Serial3.available() )
+  {
+    char inChar = (char)Serial3.read(); 
+    switch(inChar)
+    {
 		case '\n':
 		case '\r':
 		case '\0':
 		case '#':
-			command_available=true;
+			_command_available = true;
 			break;
 		default:
 			cmdstring += inChar;
@@ -2557,11 +2629,10 @@ void serialEvent()
 
     if (cmdstring.length() > maxCmdString)
     {
-		cmdstring = "";				// todo die restlichen Zeichen ignorieren
-		
-		MSG_PRINT(F("cmd to long! (max "));
-		MSG_PRINT(maxCmdString);
-		MSG_PRINTLN(F(")"));
+  		cmdstring = "";				//--- restliche Zeichen ignorieren  		
+  		Serial3.print(F("cmd to long! (max "));
+  		Serial3.print(maxCmdString);
+  		Serial3.print(F(")"));
     }
   }
 }
@@ -2569,7 +2640,6 @@ void serialEvent()
 int freeRam () 
 {
 	#ifdef CMP_MEMDBG
-
 		check_mem();
 		MSG_PRINT("\nheapptr=[0x"); MSG_PRINT( (int) heapptr, HEX); MSG_PRINT("] (growing upward, "); MSG_PRINT( (int) heapptr, DEC); MSG_PRINT(" decimal)");
 		MSG_PRINT("\nstackptr=[0x"); MSG_PRINT( (int) stackptr, HEX); MSG_PRINT("] (growing downward, "); MSG_PRINT( (int) stackptr, DEC); MSG_PRINT(" decimal)");
@@ -2600,13 +2670,13 @@ int freeRam ()
 		freeMem1  = (int) SP           - (int) __brkval;
 		freeMem2  = ramSize - stackSize - heapSize - bssSize - dataSize;
 		MSG_PRINT("\n--- section size summaries ---");
-		MSG_PRINT("\nram   size=["); MSG_PRINT( ramSize, DEC ); MSG_PRINT("] bytes decimal");
-		MSG_PRINT("\n.data size=["); MSG_PRINT( dataSize, DEC ); MSG_PRINT("] bytes decimal");
-		MSG_PRINT("\n.bss  size=["); MSG_PRINT( bssSize, DEC ); MSG_PRINT("] bytes decimal");
-		MSG_PRINT("\nheap  size=["); MSG_PRINT( heapSize, DEC ); MSG_PRINT("] bytes decimal");
+		MSG_PRINT("\nram   size=["); MSG_PRINT( ramSize, DEC );   MSG_PRINT("] bytes decimal");
+		MSG_PRINT("\n.data size=["); MSG_PRINT( dataSize, DEC );  MSG_PRINT("] bytes decimal");
+		MSG_PRINT("\n.bss  size=["); MSG_PRINT( bssSize, DEC );   MSG_PRINT("] bytes decimal");
+		MSG_PRINT("\nheap  size=["); MSG_PRINT( heapSize, DEC );  MSG_PRINT("] bytes decimal");
 		MSG_PRINT("\nstack size=["); MSG_PRINT( stackSize, DEC ); MSG_PRINT("] bytes decimal");
-		MSG_PRINT("\nfree size1=["); MSG_PRINT( freeMem1, DEC ); MSG_PRINT("] bytes decimal");
-		MSG_PRINT("\nfree size2=["); MSG_PRINT( freeMem2, DEC ); MSG_PRINT("] bytes decimal");
+		MSG_PRINT("\nfree size1=["); MSG_PRINT( freeMem1, DEC );  MSG_PRINT("] bytes decimal");
+		MSG_PRINT("\nfree size2=["); MSG_PRINT( freeMem2, DEC );  MSG_PRINT("] bytes decimal");
 	#else
 		extern int __heap_start, *__brkval;
 		int v;
